@@ -16,13 +16,17 @@ parser.add_argument('-save_dir', required=False, default='.',
 parser.add_argument('-scaler', required=False, default='minmax',
                     help='Scaler method to preprocess the data [minmax|standardscaler]')
 
+# Debugging
+parser.add_argument('-series_id', required=False, default='',
+                    help='Select only this series ID for testing')
+
 opt = parser.parse_args()
 
 if opt.save_dir and not os.path.exists(opt.save_dir):
     os.makedirs(opt.save_dir)
 
 if opt.scaler == 'minmax':
-    scaler = MinMaxScaler()
+    scaler = MinMaxScaler(feature_range=(0, 1))
 else:
     scaler = StandardScaler()
 
@@ -42,6 +46,9 @@ def main():
 
     print('Transforming sales dataset to long format...')
     # transform to long format
+    if opt.series_id != '':
+        df_train = df_train[df_train['id'] == opt.series_id]
+
     df_final = pd.melt(df_train,
                        id_vars=df_train.columns[:6].to_list(),
                        value_vars=df_train.columns[6:].to_list(),
@@ -60,9 +67,13 @@ def main():
     gc.collect()
 
     print('Preprocessing final dataset...')
+    df_final.to_csv(os.path.join(opt.save_dir, 'data_preproc.csv'),
+                    header=True,
+                    index=False,
+                    chunksize=100000,
+                    # compression='gzip',
+                    encoding='utf-8')
 
-
-    df_final.to_csv(opt.save_dir)
 
 if __name__ == '__main__':
     main()
